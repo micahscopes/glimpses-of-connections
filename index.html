@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Social Maps</title>
+        <style>
+            html {
+                background-color: darkslateblue;
+                font-family: sans;
+                color: blueviolet;
+            }
+
+            webscape-wanderer {
+                --selected-color: cyan;
+            }
+        </style>
+    </head>
+    <script type="module" src="src/index.js"></script>
+    <webscape-wanderer
+        edge-scale="7"
+        edge-scale-emphasized="0.5"
+        node-scale="0.7"
+        edge-wave-intensity="0.8"
+        edge-frequency="2"
+        node-shape="./abstract-person.obj"
+    ></webscape-wanderer>
+</html>
