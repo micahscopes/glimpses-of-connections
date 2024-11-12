@@ -88,12 +88,12 @@ export async function fetchEdgeList() {
     }
     let edges = await response.json();
     if (edges.length < 4) {
-      return fetchMockEdgeList(10, 20);
+      return fetchMockEdgeList(100, 200);
     }
     console.log(edges);
     return edges;
   } catch (error) {
     console.error('Fetch failed:', error);
-    return fetchMockEdgeList(10, 20);
+    return fetchMockEdgeList(100, 200);
   }
 }

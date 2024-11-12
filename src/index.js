@@ -16,3 +16,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   w.graphData = graph;
   w.setAttribute('node-shape', personUrl)
 });
+
+let lastTouchTime = Date.now();
+
+document.addEventListener('touchstart', () => {
+  lastTouchTime = Date.now();
+});
+
+setInterval(() => {
+  if (Date.now() - lastTouchTime > 2*60*1000) { // 2 minutes in milliseconds
+    location.reload();
+  }
+}, 10000); // Check every 10 seconds
