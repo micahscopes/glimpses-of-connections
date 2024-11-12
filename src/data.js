@@ -24,9 +24,17 @@ export function prepareGraphData(edgeList) {
   return dataFromGraph({ nodes, links: edges });
 }
 
+function fakeUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export function fetchMockEdgeList(numNodes = 5, numEdges = 7) {
   const generateGraph = (nodes, edges) => {
-    const nodeIds = Array.from({ length: nodes }, () => crypto.randomUUID());
+    const nodeIds = Array.from({ length: nodes }, () => fakeUUID());
     const edgeList = [];
 
     for (let i = 0; i < edges; i++) {
@@ -67,4 +75,25 @@ export function fetchMockEdgeList(numNodes = 5, numEdges = 7) {
   //   },
   // ];
   //
+}
+
+export async function fetchEdgeList() {
+  let lastWeek = new Date();
+  lastWeek.setDate(lastWeek.getDate() - 7);
+  let fetchUpdatedAtAfter = lastWeek.toISOString();
+  try {
+    let response = await fetch(`https://api.connections.cursive.team/api/graph/edge?fetchUpdatedAtAfter=${fetchUpdatedAtAfter}`);
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    let edges = await response.json();
+    if (edges.length < 4) {
+      return fetchMockEdgeList(10, 20);
+    }
+    console.log(edges);
+    return edges;
+  } catch (error) {
+    console.error('Fetch failed:', error);
+    return fetchMockEdgeList(10, 20);
+  }
 }

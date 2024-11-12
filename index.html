@@ -3,31 +3,43 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Social Maps</title>
+        <title>Glimpses of Connections: Collective Social Graph Making at the Edges of Observability</title>
         <style>
             html {
-                background-color: darkslateblue;
+                /* background-color: rgb(0.1,0.1,0.1); */
+                background-color: hsl(244 61% 15% / 1);
                 font-family: sans;
                 color: blueviolet;
             }
 
+            body {
+                margin: 0px;
+            }
+
             webscape-wanderer {
                 --selected-color: cyan;
+                width: 100vw;
+                height: 100vh;
+                max-width: 100%;
+                max-height: 100%;
+                margin: 0;
+                overflow: hidden;
             }
         </style>
     </head>
     <script type="module" src="src/index.js"></script>
     <webscape-wanderer
-        edge-scale="5"
+        edge-scale="7"
         edge-scale-emphasized="0.8"
         node-scale="0.7"
+        edge-alpha-non-emphasized="0.5"
+        edge-alpha-emphasized="1"
         edge-pulse-intensity="2"
-        edge-wave-speed="0.2"
-        edge-wave-speed-emphasized="0.2"
+        edge-wave-speed="0.4"
+        edge-wave-speed-emphasized="0.4"
         edge-wave-intensity="5"
         edge-wave-intensity-emphasized="1"
         edge-frequency="1.5"
         edge-frequency-emphasized="1.5"
-        node-shape="abstract-person.obj"
     ></webscape-wanderer>
 </html>

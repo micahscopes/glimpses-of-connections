@@ -1,11 +1,18 @@
 import { randomGraphData, startWebscapeWanderer } from "webscape-wanderer";
-import { fetchMockEdgeList, prepareGraphData } from "./data";
+import { fetchEdgeList, prepareGraphData } from "./data";
 
-document.addEventListener("DOMContentLoaded", () => {
-  startWebscapeWanderer();
+import personUrl from '../abstract-person.obj?url';
+
+document.addEventListener("DOMContentLoaded", async () => {
+  startWebscapeWanderer({
+    powerPreference: 'high-performance',
+    preserveDrawingBuffer: 'true',
+    antialias: true
+  });
   const w = document.querySelector("webscape-wanderer");
-  const edgeList = fetchMockEdgeList(2000, 2000);
+  const edgeList = await fetchEdgeList();
   const graph = prepareGraphData(edgeList);
   // const randomGraph = randomGraphData(50, 50);
   w.graphData = graph;
+  w.setAttribute('node-shape', personUrl)
 });
