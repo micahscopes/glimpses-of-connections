@@ -10,21 +10,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     antialias: true
   });
   const w = document.querySelector("webscape-wanderer");
-  const edgeList = await fetchEdgeList();
-  const graph = prepareGraphData(edgeList);
-  // const randomGraph = randomGraphData(50, 50);
-  w.graphData = graph;
   w.setAttribute('node-shape', personUrl)
+
+  updateGraphIfChanged();
 });
 
-let lastTouchTime = Date.now();
+async function updateGraphIfChanged() {
+  const edgeList = await fetchEdgeList();
+  const w = document.querySelector("webscape-wanderer");
+  if (edgeList.length == w.graphData?.links.length) {
+    console.log('no need to prepare more graph data')
+  } else {
+    const newGraph = prepareGraphData(edgeList);
+    w.graphData = newGraph
+  }
+}
 
+let lastTouchTime = Date.now();
 document.addEventListener('touchstart', () => {
   lastTouchTime = Date.now();
 });
 
+
+const REFRESH_TIME = 60*1000 // 60 seconds
+
 setInterval(() => {
-  if (Date.now() - lastTouchTime > 2*60*1000) { // 2 minutes in milliseconds
-    location.reload();
+  if (Date.now() - lastTouchTime > REFRESH_TIME) {
+    updateGraphIfChanged();
   }
-}, 10000); // Check every 10 seconds
+}, 5000); // Check every 5 seconds

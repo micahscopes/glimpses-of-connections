@@ -1,11 +1,57 @@
 import { dataFromGraph } from "webscape-wanderer";
+import { openDB } from 'idb';
+
+const DB_NAME = 'GraphEdgesDB';
+const STORE_NAME = 'edges';
+
+async function initDB() {
+  return openDB(DB_NAME, 1, {
+    upgrade(db) {
+      const store = db.createObjectStore(STORE_NAME, { keyPath: ['tapSenderId', 'tapReceiverId'] });
+      store.createIndex('updatedAt', 'updatedAt');
+    },
+  });
+}
+
+async function getMostRecentTimestamp() {
+  const db = await initDB();
+  const tx = db.transaction(STORE_NAME, 'readonly');
+  const store = tx.objectStore(STORE_NAME);
+  const cursor = await store.index('updatedAt').openCursor(null, 'prev');
+  if (cursor) {
+    return new Date(cursor.value.updatedAt);
+  }
+  return new Date(0); // Return epoch if no entries
+}
+
+async function storeEdges(edges) {
+  const db = await initDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+  for (const edge of edges) {
+    await store.put(edge);
+  }
+  await tx.done;
+}
+
+async function getAllEdges() {
+  const db = await initDB();
+  return db.getAll(STORE_NAME);
+}
+
+export async function countAllEdges() {
+  const db = await initDB();
+  const tx = db.transaction(STORE_NAME, 'readonly');
+  const store = tx.objectStore(STORE_NAME);
+  return store.count();
+}
 
 export function prepareGraphData(edgeList) {
   const seenNodeIds = new Set();
   const nodes = [];
   const edges = [];
 
-  for (const { source, target, timestamp } of edgeList) {
+  for (const { tapSenderId: source, tapReceiverId: target, updatedAt: timestamp } of edgeList) {
     if (!seenNodeIds.has(source)) {
       seenNodeIds.add(source);
       nodes.push({ id: source });
@@ -21,7 +67,8 @@ export function prepareGraphData(edgeList) {
     });
   }
 
-  return dataFromGraph({ nodes, links: edges });
+  const graph = dataFromGraph({ nodes, links: edges });
+  return graph
 }
 
 function fakeUUID() {
@@ -32,68 +79,59 @@ function fakeUUID() {
   });
 }
 
-export function fetchMockEdgeList(numNodes = 5, numEdges = 7) {
-  const generateGraph = (nodes, edges) => {
-    const nodeIds = Array.from({ length: nodes }, () => fakeUUID());
-    const edgeList = [];
+function fetchMockEdgeList(numNodes = 5, numEdges = 7) {
+  const nodeIds = Array.from({ length: numNodes }, () => fakeUUID());
+  const edgeList = [];
 
-    for (let i = 0; i < edges; i++) {
-      const fromIndex = Math.floor(Math.random() * nodes);
-      let toIndex;
-      toIndex = Math.floor(Math.random() * nodes);
-      while (toIndex === fromIndex) {
-        toIndex = Math.floor(Math.random() * nodes);
-      }
+  for (let i = 0; i < numEdges; i++) {
+    const fromIndex = Math.floor(Math.random() * numNodes);
+    let toIndex;
+    do {
+      toIndex = Math.floor(Math.random() * numNodes);
+    } while (toIndex === fromIndex);
 
-      edgeList.push({
-        source: nodeIds[fromIndex],
-        target: nodeIds[toIndex],
-        timestamp: Date.now() - i * 60000,
-      });
-    }
+    edgeList.push({
+      tapSenderId: nodeIds[fromIndex],
+      tapReceiverId: nodeIds[toIndex],
+      updatedAt: new Date(Date.now() - i * 60000).toISOString(),
+      fake: true  // Add this field to easily identify mock data
+    });
+  }
 
-    return edgeList;
-  };
-
-  return generateGraph(numNodes, numEdges);
-  // Returns random data of the format:
-  // [
-  //   {
-  //     source: "123e4567-e89b-12d3-a456-426614174000",
-  //     target: "987e6543-e21b-12d3-a456-426614174000",
-  //     timestamp: Date.now(),
-  //   },
-  //   {
-  //     source: "456e7890-e12b-34d5-b678-426614174000",
-  //     target: "321e9876-e54b-34d5-b678-426614174000",
-  //     timestamp: Date.now() - 60000,
-  //   },
-  //   {
-  //     source: "789e0123-e45b-56d7-c890-426614174000",
-  //     target: "654e3210-e78b-56d7-c890-426614174000",
-  //     timestamp: Date.now() - 120000,
-  //   },
-  // ];
-  //
+  return edgeList;
 }
 
 export async function fetchEdgeList() {
-  let lastWeek = new Date();
-  lastWeek.setDate(lastWeek.getDate() - 7);
-  let fetchUpdatedAtAfter = lastWeek.toISOString();
+  async function fetchNewEdges() {
+    const lastUpdatedAt = await getMostRecentTimestamp();
+    const response = await fetch(`https://api.connections.cursive.team/api/graph/edge?fetchUpdatedAtAfter=${lastUpdatedAt.toISOString()}`);
+    if (!response.ok) throw new Error('Network response was not ok');
+    return response.json();
+  }
+
+  async function handleEdges(edges) {
+    if (edges.length > 0) {
+      await storeEdges(edges);
+      console.log(`Stored ${edges.length} new edges`);
+    } else {
+      console.log('No new edges to store');
+    }
+    return getAllEdges();
+  }
+
+  async function edgesOrMock() {
+    const allEdges = await getAllEdges();
+    const edgeCount = allEdges.length;
+    console.log(`Total edges in DB: ${edgeCount}`);
+    return edgeCount < 10 ? fetchMockEdgeList(100, 200) : allEdges;
+  }
+
   try {
-    let response = await fetch(`https://api.connections.cursive.team/api/graph/edge?fetchUpdatedAtAfter=${fetchUpdatedAtAfter}`);
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
-    }
-    let edges = await response.json();
-    if (edges.length < 4) {
-      return fetchMockEdgeList(100, 200);
-    }
-    console.log(edges);
-    return edges;
+    const newEdges = await fetchNewEdges();
+    await handleEdges(newEdges);
+    return edgesOrMock();
   } catch (error) {
     console.error('Fetch failed:', error);
-    return fetchMockEdgeList(100, 200);
+    return edgesOrMock();
   }
 }
